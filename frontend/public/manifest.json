@@ -1,0 +1,11 @@
+{
+  "name": "Metabolic Tracker",
+  "short_name": "Metabolic",
+  "description": "Adaptive nutrition and training tracking dashboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait-primary",
+  "icons": []
+}
