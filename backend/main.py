@@ -1,6 +1,7 @@
 """FastAPI application entrypoint for the data-tracking backend."""
 
 from contextlib import asynccontextmanager
+import os
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -30,10 +31,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://3000-ilemdy92gpqlytktyreyv-f2e84f5c.sg2.manus.computer",
-    ],
+    allow_origins=[origin.strip() for origin in os.getenv("FRONTEND_ORIGIN", "*").split(",") if origin.strip()],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],

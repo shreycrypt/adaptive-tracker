@@ -17,12 +17,13 @@ from sqlalchemy.orm import DeclarativeBase
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{BASE_DIR / 'app.db'}")
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-engine: AsyncEngine = create_async_engine(
-    DATABASE_URL,
-    echo=False,
-    connect_args={"check_same_thread": False},
-)
+engine_kwargs = {"echo": False}
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+engine: AsyncEngine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
@@ -52,15 +53,11 @@ async def init_db() -> None:
         # SQLite's create_all does not alter an already-existing table. Keep
         # this small additive migration here so existing installations can
         # adopt the adaptive activity target without a separate migration tool.
-        columns = await connection.execute(text("PRAGMA table_info(user_profiles)"))
-        existing_columns = {row[1] for row in columns.fetchall()}
-        if "current_target_active_calories" not in existing_columns:
-            await connection.execute(
-                text(
-                    "ALTER TABLE user_profiles "
-                    "ADD COLUMN current_target_active_calories FLOAT"
-                )
-            )
+        if DATABASE_URL.startswith("sqlite"):
+            columns = await connection.execute(text("PRAGMA table_info(user_profiles)"))
+            existing_columns = {row[1] for row in columns.fetchall()}
+            if "current_target_active_calories" not in existing_columns:
+                await connection.execute(text("ALTER TABLE user_profiles ADD COLUMN current_target_active_calories FLOAT"))
 
     # Seed the first profile so a fresh installation can be used immediately.
     # The check makes startup idempotent and never overwrites user changes.

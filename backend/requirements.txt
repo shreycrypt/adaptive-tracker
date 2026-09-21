@@ -6,3 +6,4 @@ pydantic
 instructor
 openai
 python-dotenv
+asyncpg
