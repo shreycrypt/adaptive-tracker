@@ -37,6 +37,18 @@ async def _get_daily_log(
     return result.scalars().first()
 
 
+async def _ensure_today_log(session: AsyncSession, user_id: int) -> DailyLog:
+    """Create a zeroed current-day row exactly once per user and calendar date."""
+    today = date.today()
+    daily_log = await _get_daily_log(session, user_id, today)
+    if daily_log is None:
+        daily_log = DailyLog(user_id=user_id, date=today, metric_weight=None)
+        session.add(daily_log)
+        await session.commit()
+        await session.refresh(daily_log)
+    return daily_log
+
+
 @router.post("/weight", response_model=WeightLogResponse, status_code=status.HTTP_200_OK)
 async def log_weight(
     request: WeightLogRequest,
@@ -89,6 +101,7 @@ async def get_dashboard(
     """Return current trailing-seven-day trends and all logged items."""
     if await session.get(UserProfile, user_id) is None:
         raise HTTPException(status_code=404, detail="User profile not found")
+    await _ensure_today_log(session, user_id)
     end_date = date.today()
     start_date = end_date - timedelta(days=6)
     result = await session.execute(

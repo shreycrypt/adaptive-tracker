@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator
 import os
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 from sqlalchemy import text
@@ -23,6 +24,13 @@ if DATABASE_URL.startswith("postgresql://"):
 engine_kwargs = {"echo": False}
 if DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    parsed_url = urlsplit(DATABASE_URL)
+    query = dict(parse_qsl(parsed_url.query, keep_blank_values=True))
+    query.pop("sslmode", None)
+    query.pop("channel_binding", None)
+    DATABASE_URL = urlunsplit(parsed_url._replace(query=urlencode(query)))
+    engine_kwargs["connect_args"] = {"ssl": "require"}
 engine: AsyncEngine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
