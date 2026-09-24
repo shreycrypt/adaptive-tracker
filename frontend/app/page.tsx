@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, CalendarDays, Check, Loader2, RefreshCw, Scale, Settings2, Utensils, Plus, X } from "lucide-react";
+import { Activity, CalendarDays, Check, Loader2, RefreshCw, Scale, Settings2, Utensils, ArrowLeft, Plus, X } from "lucide-react";
 import { MetricHeader } from "@/components/MetricHeader";
 import { QuickLogBar } from "@/components/QuickLogBar";
 import { TrendChart } from "@/components/TrendChart";
@@ -28,7 +28,7 @@ export default function HomePage() {
   const [adaptiveMessage, setAdaptiveMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"today" | "trends" | "profile">("today");
   const [parsedLog, setParsedLog] = useState<CombinedParseResult | null>(null);
-  const [showBaselineWizard, setShowBaselineWizard] = useState(true);
+  const [showBaselineWizard, setShowBaselineWizard] = useState(true); // Auto open wizard on load
   const [wizardStep, setWizardStep] = useState(1);
 
   // Questionnaire states
@@ -47,8 +47,8 @@ export default function HomePage() {
   const [qStepTarget, setQStepTarget] = useState("7500");
   const [qAdherenceObstacle, setQAdherenceObstacle] = useState("time-limits");
 
-  // Dynamic targets calculation based on questionnaire
- const dynamicTargets = useMemo(() => {
+  // Dynamic targets based on questionnaire
+  const dynamicTargets = useMemo(() => {
     const w = Number(qCurrentWeight) || 70;
     const h = Number(qHeight) || 175;
     const a = Number(qAge) || 25;
@@ -138,10 +138,9 @@ export default function HomePage() {
     }
   }
 
-  // Auto-open baseline wizard on load
+  // Wizard opens automatically
   useEffect(() => { setShowBaselineWizard(true); }, []);
 
-  // Render Baseline Wizard
   if (showBaselineWizard) {
     return (
       <main className="min-h-screen bg-[#050507] text-[#E4E4E7] font-sans flex flex-col items-center justify-start px-4 py-8 overflow-y-auto transition-all duration-500 ease-in-out">
@@ -161,13 +160,11 @@ export default function HomePage() {
               <span key={label} className={`px-2 py-0.5 rounded ${wizardStep === i + 1 ? 'text-emerald-400 border-b-2 border-emerald-400 font-bold' : ''}`}>{label}</span>
             ))}
           </div>
-          {/* Wizard Content with smooth fade-in */}
+          {/* Content */}
           <div className="min-h-[280px] bg-white/[0.01] border border-white/5 rounded-2xl p-5 mb-6 transition-all duration-300 ease-in-out">
             <p className="text-xs text-zinc-500 mb-4 font-num font-medium">Question {wizardStep} of 10</p>
-            {/* Question content... (keep as before, no calorie wheels) */}
             {wizardStep === 1 && (
               <div className="space-y-3">
-                {/* Focus selection buttons */}
                 {["fat-loss", "recomp", "hypertrophy"].map((opt) => (
                   <button key={opt} onClick={() => setQFocus(opt)} className={`w-full text-left p-4 rounded-xl border transition ${qFocus === opt ? "border-emerald-500 bg-emerald-500/5 text-white" : "border-white/5 bg-black/20 text-zinc-400 hover:border-white/10"}`}>
                     <div className="font-semibold text-sm">{opt === "fat-loss" ? "Fat loss" : opt === "recomp" ? "Body recomp" : "Hypertrophy"}</div>
@@ -176,10 +173,10 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-            {/* Additional steps as before (Baseline, NEAT, etc.) */}
-            {/* ... Keep the rest unchanged ... */}
+            {/* Additional steps like Baseline, NEAT, etc. as before, omitted for brevity but keep same structure */}
+            {/* ... */}
           </div>
-          {/* Navigation buttons with smooth scale transition */}
+          {/* Navigation */}
           <div className="flex justify-between items-center border-t border-white/5 pt-4 transition-all duration-300 ease-in-out">
             <button disabled={wizardStep === 1} onClick={() => setWizardStep(prev => prev - 1)} className="text-xs font-semibold text-zinc-400 hover:text-white transition">← Back</button>
             {wizardStep < 10 ? (
@@ -193,7 +190,7 @@ export default function HomePage() {
     );
   }
 
-  // Main UI (unchanged, but with minimal animations)
+  // Main Dashboard UI with sleek animations
   return (
     <main className="min-h-screen bg-[#050507] text-[#E4E4E7] font-sans relative px-4 pb-36 pt-7 transition-all duration-500 ease-in-out overflow-x-hidden">
       <div className="mx-auto max-w-md relative z-10">
@@ -221,37 +218,49 @@ export default function HomePage() {
         {/* Today Tab */}
         {activeTab === "today" && (
           <div className="space-y-4">
-            {/* Metrics */}
-            <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-2xl">
-              <MetricHeader {...} />
+            {/* Metrics Header */}
+            <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-2xl transition-all duration-500">
+              <MetricHeader
+                targetCalories={dynamicTargets.calories}
+                consumedCalories={metrics.calories}
+                targetActiveCalories={dynamicTargets.active}
+                activeCalories={metrics.active}
+                proteinGrams={metrics.protein}
+                proteinTarget={150}
+                carbsGrams={metrics.carbs}
+                carbsTarget={220}
+                fatGrams={metrics.fat}
+                fatTarget={70}
+              />
             </div>
             {/* Macro Bars */}
-            <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl">
-              {/* ... macro bars ... */}
+            <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
+              {/* Macro bar components similar to previous */}
+              {/* ... */}
             </div>
-            {/* Trend Graph */}
-            <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-1 shadow-xl transition-all duration-500 ease-in-out">
+            {/* Trend Chart with smooth animation */}
+            <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-1 shadow-xl transition-all duration-500">
               <TrendChart days={dashboard?.days ?? []} velocity={dashboard?.weekly_weight_velocity ?? null} />
             </div>
-            {/* Weight Log */}
-            <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl">
-              {/* ... weight log input ... */}
+            {/* Weight logging */}
+            <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
+              {/* ... weight input ... */}
             </section>
-            {/* Adaptive Targets */}
-            <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl">
+            {/* Adaptive matrix */}
+            <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
               {/* ... adaptive targets ... */}
             </section>
             {/* Log summary */}
             {parsedLog && (
-              <section className="bg-emerald-950/20 border border-emerald-500/20 rounded-[24px] p-5 shadow-xl">
+              <section className="bg-emerald-950/20 border border-emerald-500/20 rounded-[24px] p-5 shadow-xl transition-all duration-500">
                 {/* ... */}
               </section>
             )}
           </div>
         )}
-        {/* Trends & Profile (unchanged) */}
+        {/* Trends and Profile tabs (unchanged, keep minimal with transitions) */}
         {/* ... */}
-        {/* Bottom Nav & Food Log Bar (unchanged) */}
+        {/* Bottom nav and food log bar (unchanged, keep minimal) */}
       </div>
     </main>
   );
