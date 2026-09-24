@@ -1,21 +1,38 @@
-import type { Metadata, Viewport } from "next";
-import "./globals.css";
+import { Syne, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+import './globals.css';
 
-export const metadata: Metadata = {
-  title: "Metabolic Tracker",
-  description: "Adaptive nutrition and training dashboard",
-  manifest: "/manifest.json",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Metabolic" },
+// Primary Display Font (Headings like "Good to see you.")
+const syne = Syne({
+  subsets: ['latin'],
+  variable: '--font-syne',
+  display: 'swap',
+});
+
+// Primary Body Font (Labels, descriptions, text)
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
+// Precision Numerical Font (Calories, grams, weight graphs, percentages)
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-numbers',
+  display: 'swap',
+});
+
+export const metadata = {
+  title: 'Metabolic & Nutrition Tracker',
+  description: 'Precision athletic nutrition and body recomposition ledger',
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#050505",
-};
-
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={`${syne.variable} ${jakarta.variable} ${spaceGrotesk.variable}`}>
+      <body className="bg-[#09090B] text-slate-100 font-sans antialiased min-h-screen">
+        {children}
+      </body>
+    </html>
+  );
 }
