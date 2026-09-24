@@ -18,3 +18,17 @@ button { -webkit-tap-highlight-color: transparent; }
   --font-heading: var(--font-syne), sans-serif;
   --font-num: var(--font-numbers), monospace;
 }
+
+/* 1. Global display font for all headings */
+h1, h2, h3, h4, h5, h6, .heading {
+  font-family: var(--font-syne), sans-serif !important;
+}
+
+/* 2. Global font for all numbers, weights, and metrics */
+[class*="num"], 
+.font-num,
+table,
+.recharts-text,
+p:has(> span) {
+  font-family: var(--font-numbers), monospace;
+}
