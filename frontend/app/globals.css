@@ -32,3 +32,41 @@ table,
 p:has(> span) {
   font-family: var(--font-numbers), monospace;
 }
+
+/* Obsidian Dark Glass & Glow Effects */
+.glass-card {
+  background: rgba(18, 18, 22, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(24, 24, 29, 0.75);
+  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.08);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+.glow-blue {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+.glow-amber {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Background Depth Glow */
+body {
+  background-color: #09090B;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
