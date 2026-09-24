@@ -28,10 +28,10 @@ export default function HomePage() {
   const [adaptiveMessage, setAdaptiveMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"today" | "trends" | "profile">("today");
   const [parsedLog, setParsedLog] = useState<CombinedParseResult | null>(null);
-  const [showBaselineWizard, setShowBaselineWizard] = useState(true); // Auto open wizard on load
+  const [showBaselineWizard, setShowBaselineWizard] = useState(true); // trigger questionnaire popup on load
   const [wizardStep, setWizardStep] = useState(1);
 
-  // Questionnaire states
+  // Questionnaire states - keep original variable names
   const [qFocus, setQFocus] = useState("recomp");
   const [qCurrentWeight, setQCurrentWeight] = useState("75");
   const [qHeight, setQHeight] = useState("178");
@@ -47,19 +47,20 @@ export default function HomePage() {
   const [qStepTarget, setQStepTarget] = useState("7500");
   const [qAdherenceObstacle, setQAdherenceObstacle] = useState("time-limits");
 
-  // Dynamic targets based on questionnaire
+  // Calculate dynamic targets based on questionnaire
   const dynamicTargets = useMemo(() => {
     const w = Number(qCurrentWeight) || 70;
     const h = Number(qHeight) || 175;
     const a = Number(qAge) || 25;
-    let baseBmr = (10 * w) + (6.25 * h) - (5 * a);
-    baseBmr += qGender === "male" ? 5 : -161;
+    let bmr = (10 * w) + (6.25 * h) - (5 * a);
+    bmr += qGender === "male" ? 5 : -161;
 
-    let activityMultiplier = 1.2, neatBurn = 200;
+    let activityMultiplier = 1.2;
+    let neatBurn = 200;
     if (qNeat === "lightly-active") { activityMultiplier = 1.375; neatBurn = 350; }
     if (qNeat === "highly-active") { activityMultiplier = 1.55; neatBurn = 550; }
 
-    let calories = Math.round(baseBmr * activityMultiplier);
+    let calories = Math.round(bmr * activityMultiplier);
     if (qFocus === "fat-loss") calories -= 400;
     if (qFocus === "hypertrophy") calories += 300;
     if (qDietStyle === "low-carb") calories -= 50;
@@ -71,9 +72,10 @@ export default function HomePage() {
     };
   }, [qFocus, qCurrentWeight, qHeight, qAge, qGender, qNeat, qDietStyle, qStepTarget]);
 
-  // Fetch dashboard
+  // Fetch dashboard data
   const refresh = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true); else setRefreshing(true);
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     try {
       setDashboard(await getDashboard(USER_ID));
       setError("");
@@ -84,9 +86,10 @@ export default function HomePage() {
       setRefreshing(false);
     }
   }, []);
+
   useEffect(() => { void refresh(); }, [refresh]);
 
-  // Calculate total metrics
+  // Compute total nutrients
   const metrics = useMemo(() => {
     const days = dashboard?.days ?? [];
     let cal = 0, active = 0, protein = 0, carbs = 0, fat = 0;
@@ -110,6 +113,7 @@ export default function HomePage() {
     return { calories: cal, active, protein, carbs, fat };
   }, [dashboard]);
 
+  // Save weight
   async function saveWeight() {
     const parsed = Number(weight);
     if (!Number.isFinite(parsed) || parsed <= 0) return;
@@ -125,11 +129,13 @@ export default function HomePage() {
     }
   }
 
+  // Run adaptive calculation
   async function runAdaptive() {
-    setAdaptiveBusy(true); setAdaptiveMessage("");
+    setAdaptiveBusy(true);
+    setAdaptiveMessage("");
     try {
       const result = await recalculateAdaptiveTargets(USER_ID);
-      setAdaptiveMessage(result.audit.reason);
+      setAdaptiveMessage(result?.audit?.reason ?? "");
       await refresh(true);
     } catch (err) {
       setAdaptiveMessage(err instanceof Error ? err.message : "Could not recalculate");
@@ -138,9 +144,10 @@ export default function HomePage() {
     }
   }
 
-  // Wizard opens automatically
+  // Auto open baseline wizard on load
   useEffect(() => { setShowBaselineWizard(true); }, []);
 
+  // Render the baseline wizard
   if (showBaselineWizard) {
     return (
       <main className="min-h-screen bg-[#050507] text-[#E4E4E7] font-sans flex flex-col items-center justify-start px-4 py-8 overflow-y-auto transition-all duration-500 ease-in-out">
@@ -160,9 +167,10 @@ export default function HomePage() {
               <span key={label} className={`px-2 py-0.5 rounded ${wizardStep === i + 1 ? 'text-emerald-400 border-b-2 border-emerald-400 font-bold' : ''}`}>{label}</span>
             ))}
           </div>
-          {/* Content */}
+          {/* Wizard Content */}
           <div className="min-h-[280px] bg-white/[0.01] border border-white/5 rounded-2xl p-5 mb-6 transition-all duration-300 ease-in-out">
             <p className="text-xs text-zinc-500 mb-4 font-num font-medium">Question {wizardStep} of 10</p>
+            {/* Example: focus selection step */}
             {wizardStep === 1 && (
               <div className="space-y-3">
                 {["fat-loss", "recomp", "hypertrophy"].map((opt) => (
@@ -173,11 +181,10 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-            {/* Additional steps like Baseline, NEAT, etc. as before, omitted for brevity but keep same structure */}
-            {/* ... */}
+            {/* Additional steps omitted for brevity: keep the same structure, no calorie wheel involved */}
           </div>
-          {/* Navigation */}
-          <div className="flex justify-between items-center border-t border-white/5 pt-4 transition-all duration-300 ease-in-out">
+          {/* Wizard navigation buttons */}
+          <div className="flex justify-between border-t border-white/5 pt-4 transition-all duration-300 ease-in-out">
             <button disabled={wizardStep === 1} onClick={() => setWizardStep(prev => prev - 1)} className="text-xs font-semibold text-zinc-400 hover:text-white transition">← Back</button>
             {wizardStep < 10 ? (
               <button onClick={() => setWizardStep(prev => prev + 1)} className="h-10 px-5 rounded-xl bg-emerald-400 text-black text-xs font-bold transition hover:bg-emerald-300 active:scale-105 flex items-center gap-1"><span>Next</span> →</button>
@@ -190,7 +197,7 @@ export default function HomePage() {
     );
   }
 
-  // Main Dashboard UI with sleek animations
+  // Main Dashboard UI
   return (
     <main className="min-h-screen bg-[#050507] text-[#E4E4E7] font-sans relative px-4 pb-36 pt-7 transition-all duration-500 ease-in-out overflow-x-hidden">
       <div className="mx-auto max-w-md relative z-10">
@@ -208,14 +215,14 @@ export default function HomePage() {
             <button aria-label="Dashboard Back" onClick={() => setActiveTab("today")} className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/10 bg-[#121215]/80 backdrop-blur-xl text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-white"><ArrowLeft className="h-4 w-4" /> <span>Dashboard</span></button>
           )}
         </header>
-        {/* Error */}
+        {/* Error message */}
         {error && (
           <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-950/20 px-4 py-3 text-xs text-red-300 backdrop-blur-md">
             <span className="font-semibold text-red-400 block mb-0.5">Network Error</span>
             {error}
           </div>
         )}
-        {/* Today Tab */}
+        {/* Today tab */}
         {activeTab === "today" && (
           <div className="space-y-4">
             {/* Metrics Header */}
@@ -235,32 +242,31 @@ export default function HomePage() {
             </div>
             {/* Macro Bars */}
             <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-              {/* Macro bar components similar to previous */}
-              {/* ... */}
+              {/* Your macro bar components here, keep minimal */}
             </div>
-            {/* Trend Chart with smooth animation */}
+            {/* Trend Chart with smooth transition */}
             <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-1 shadow-xl transition-all duration-500">
               <TrendChart days={dashboard?.days ?? []} velocity={dashboard?.weekly_weight_velocity ?? null} />
             </div>
-            {/* Weight logging */}
+            {/* Weight Log */}
             <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-              {/* ... weight input ... */}
+              {/* Your weight input and log button */}
             </section>
-            {/* Adaptive matrix */}
+            {/* Adaptive Targets */}
             <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-              {/* ... adaptive targets ... */}
+              {/* Your adaptive targets info */}
             </section>
-            {/* Log summary */}
+            {/* Log summary if available */}
             {parsedLog && (
               <section className="bg-emerald-950/20 border border-emerald-500/20 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-                {/* ... */}
+                {/* Log summary details */}
               </section>
             )}
           </div>
         )}
-        {/* Trends and Profile tabs (unchanged, keep minimal with transitions) */}
+        {/* Other tabs (trends, profile) */}
         {/* ... */}
-        {/* Bottom nav and food log bar (unchanged, keep minimal) */}
+        {/* Bottom food log bar and navigation */}
       </div>
     </main>
   );
