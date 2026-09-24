@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, CalendarDays, Check, Loader2, RefreshCw, Scale, Settings2, Utensils, ArrowLeft, Plus, X } from "lucide-react";
+import { Activity, CalendarDays, Check, Loader2, RefreshCw, Scale, Settings2, Utensils, ArrowLeft, Plus, X, CircleUser } from "lucide-react"; // Import your icons, replace as needed
 import { MetricHeader } from "@/components/MetricHeader";
 import { QuickLogBar } from "@/components/QuickLogBar";
 import { TrendChart } from "@/components/TrendChart";
@@ -129,7 +129,7 @@ export default function HomePage() {
     }
   }
 
-  // Run adaptive calculation
+  // Run adaptive recalculation
   async function runAdaptive() {
     setAdaptiveBusy(true);
     setAdaptiveMessage("");
@@ -147,7 +147,6 @@ export default function HomePage() {
   // Auto open baseline wizard on load
   useEffect(() => { setShowBaselineWizard(true); }, []);
 
-  // Render the baseline wizard
   if (showBaselineWizard) {
     return (
       <main className="min-h-screen bg-[#050507] text-[#E4E4E7] font-sans flex flex-col items-center justify-start px-4 py-8 overflow-y-auto transition-all duration-500 ease-in-out">
@@ -181,10 +180,11 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-            {/* Additional steps omitted for brevity: keep the same structure, no calorie wheel involved */}
+            {/* Additional steps like Baseline, NEAT, etc. as before, omitted for brevity but keep same structure */}
+            {/* ... */}
           </div>
-          {/* Wizard navigation buttons */}
-          <div className="flex justify-between border-t border-white/5 pt-4 transition-all duration-300 ease-in-out">
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center border-t border-white/5 pt-4 transition-all duration-300 ease-in-out">
             <button disabled={wizardStep === 1} onClick={() => setWizardStep(prev => prev - 1)} className="text-xs font-semibold text-zinc-400 hover:text-white transition">← Back</button>
             {wizardStep < 10 ? (
               <button onClick={() => setWizardStep(prev => prev + 1)} className="h-10 px-5 rounded-xl bg-emerald-400 text-black text-xs font-bold transition hover:bg-emerald-300 active:scale-105 flex items-center gap-1"><span>Next</span> →</button>
@@ -197,7 +197,7 @@ export default function HomePage() {
     );
   }
 
-  // Main Dashboard UI
+  // Main dashboard UI
   return (
     <main className="min-h-screen bg-[#050507] text-[#E4E4E7] font-sans relative px-4 pb-36 pt-7 transition-all duration-500 ease-in-out overflow-x-hidden">
       <div className="mx-auto max-w-md relative z-10">
@@ -210,19 +210,23 @@ export default function HomePage() {
             </h1>
           </div>
           {activeTab !== "profile" ? (
-            <button aria-label="Profile" onClick={() => setActiveTab("profile")} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-[#121215]/80 backdrop-blur-xl text-zinc-400 transition hover:border-white/20 hover:text-white"><CircleUserRound className="h-5 w-5" /></button>
+            <button aria-label="Profile" onClick={() => setActiveTab("profile")} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-[#121215]/80 backdrop-blur-xl text-zinc-400 transition hover:border-white/20 hover:text-white">
+              <CircleUser className="h-5 w-5" />
+            </button>
           ) : (
-            <button aria-label="Dashboard Back" onClick={() => setActiveTab("today")} className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/10 bg-[#121215]/80 backdrop-blur-xl text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-white"><ArrowLeft className="h-4 w-4" /> <span>Dashboard</span></button>
+            <button aria-label="Dashboard Back" onClick={() => setActiveTab("today")} className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/10 bg-[#121215]/80 backdrop-blur-xl text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-white">
+              <ArrowLeft className="h-4 w-4" /> <span>Dashboard</span>
+            </button>
           )}
         </header>
-        {/* Error message */}
+        {/* Error Handling */}
         {error && (
           <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-950/20 px-4 py-3 text-xs text-red-300 backdrop-blur-md">
             <span className="font-semibold text-red-400 block mb-0.5">Network Error</span>
             {error}
           </div>
         )}
-        {/* Today tab */}
+        {/* Today Tab Content */}
         {activeTab === "today" && (
           <div className="space-y-4">
             {/* Metrics Header */}
@@ -242,31 +246,61 @@ export default function HomePage() {
             </div>
             {/* Macro Bars */}
             <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-              {/* Your macro bar components here, keep minimal */}
+              {/* Your macro bars component or code here */}
+              {/* Example: */}
+              {/* <MacroBars ... /> */}
             </div>
-            {/* Trend Chart with smooth transition */}
+            {/* Trend Chart */}
             <div className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-1 shadow-xl transition-all duration-500">
               <TrendChart days={dashboard?.days ?? []} velocity={dashboard?.weekly_weight_velocity ?? null} />
             </div>
-            {/* Weight Log */}
+            {/* Weight Logging */}
             <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-              {/* Your weight input and log button */}
+              <div className="flex gap-2 items-center justify-center">
+                <input
+                  type="number"
+                  placeholder="Weight"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  className="bg-transparent text-white border border-white/10 rounded-xl px-3 py-2 w-24 text-center focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                />
+                <button
+                  disabled={weightSaving}
+                  onClick={saveWeight}
+                  className="px-3 py-2 rounded-xl bg-emerald-400 text-black font-semibold text-sm transition hover:bg-emerald-300 disabled:opacity-50"
+                >
+                  {weightSaving ? "Saving..." : "Log"}
+                </button>
+              </div>
             </section>
             {/* Adaptive Targets */}
             <section className="bg-[#121215]/80 backdrop-blur-xl border border-white/10 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-              {/* Your adaptive targets info */}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={runAdaptive}
+                  disabled={adaptiveBusy}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-400 font-semibold text-black text-sm transition hover:bg-emerald-300 disabled:opacity-50"
+                >
+                  {adaptiveBusy ? "Recalculating..." : "Recalculate"}
+                </button>
+                {adaptiveMessage && (
+                  <p className="text-xs text-zinc-400 mt-2">{adaptiveMessage}</p>
+                )}
+              </div>
             </section>
-            {/* Log summary if available */}
+            {/* Log Summary */}
             {parsedLog && (
               <section className="bg-emerald-950/20 border border-emerald-500/20 rounded-[24px] p-5 shadow-xl transition-all duration-500">
-                {/* Log summary details */}
+                {/* Your log summary display */}
+                {/* For example: */}
+                {/* <LogSummary parsedLog={parsedLog} /> */}
               </section>
             )}
           </div>
         )}
-        {/* Other tabs (trends, profile) */}
+        {/* Additional tabs for trends/profile can go here, kept minimal */}
         {/* ... */}
-        {/* Bottom food log bar and navigation */}
+        {/* Bottom food log bar or other components */}
       </div>
     </main>
   );
