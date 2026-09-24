@@ -12,3 +12,9 @@ body { margin: 0; background: radial-gradient(circle at 50% -10%, #161b13 0%, #0
 button, input { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 ::selection { background: #c7f36b; color: #050505; }
+
+@theme {
+  --font-sans: var(--font-jakarta), sans-serif;
+  --font-heading: var(--font-syne), sans-serif;
+  --font-num: var(--font-numbers), monospace;
+}
