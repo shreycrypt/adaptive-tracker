@@ -70,3 +70,33 @@ body {
   background-attachment: fixed;
 }
 
+/* Automatically turn ALL dark cards into Frosted Obsidian Glass */
+main > div, 
+section > div, 
+[class*="bg-[#1"], 
+[class*="bg-zinc"], 
+[class*="bg-neutral"] {
+  background: rgba(18, 18, 22, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Subtle glow effect behind the app background */
+body {
+  background-color: #09090B !important;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Add vibrant glow to any progress meters/svg lines */
+circle[stroke="#10B981"], path[fill="#10B981"] {
+  filter: drop-shadow(0px 0px 6px rgba(16, 185, 129, 0.6));
+}
+circle[stroke="#3B82F6"], path[fill="#3B82F6"] {
+  filter: drop-shadow(0px 0px 6px rgba(59, 130, 246, 0.6));
+}
