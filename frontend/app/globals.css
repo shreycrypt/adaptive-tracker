@@ -1,30 +1,10 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
-  --background: #050505;
-  --foreground: #f5f5f5;
-}
-
-* { box-sizing: border-box; }
-html { background: var(--background); }
-body { margin: 0; background: radial-gradient(circle at 50% -10%, #161b13 0%, #050505 38rem); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
-button, input { font: inherit; }
-button { -webkit-tap-highlight-color: transparent; }
-::selection { background: #c7f36b; color: #050505; }
-
-@theme {
-  --font-sans: var(--font-jakarta), sans-serif;
-  --font-heading: var(--font-syne), sans-serif;
-  --font-num: var(--font-numbers), monospace;
-}
-
-/* 1. Global display font for all headings */
+/* 1. Typography Rules */
 h1, h2, h3, h4, h5, h6, .heading {
   font-family: var(--font-syne), sans-serif !important;
 }
 
-/* 2. Global font for all numbers, weights, and metrics */
 [class*="num"], 
 .font-num,
 table,
@@ -33,70 +13,42 @@ p:has(> span) {
   font-family: var(--font-numbers), monospace;
 }
 
-/* Obsidian Dark Glass & Glow Effects */
-.glass-card {
-  background: rgba(18, 18, 22, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* 2. Frosted Glass Cards Override */
+div[class*="bg-"],
+section[class*="bg-"],
+[class*="border-"] {
+  background-color: rgba(18, 18, 22, 0.70) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
 }
 
-.glass-card-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-card-hover:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(24, 24, 29, 0.75);
-  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.08);
+/* 3. Subtle Hover Glow on Cards */
+div[class*="rounded"]:hover {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
 }
 
-.glow-emerald {
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
-}
-.glow-blue {
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
-}
-.glow-amber {
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
-}
-
-/* Background Depth Glow */
+/* 4. High-Intensity Radial Background Glow */
 body {
-  background-color: #09090B;
+  background-color: #050507 !important;
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 40%);
-  background-attachment: fixed;
-}
-
-/* Automatically turn ALL dark cards into Frosted Obsidian Glass */
-main > div, 
-section > div, 
-[class*="bg-[#1"], 
-[class*="bg-zinc"], 
-[class*="bg-neutral"] {
-  background: rgba(18, 18, 22, 0.75) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 1rem !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
-}
-
-/* Subtle glow effect behind the app background */
-body {
-  background-color: #09090B !important;
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%) !important;
+    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.25) 0%, transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(59, 130, 246, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 20% 70%, rgba(168, 85, 247, 0.15) 0%, transparent 50%) !important;
   background-attachment: fixed !important;
 }
 
-/* Add vibrant glow to any progress meters/svg lines */
-circle[stroke="#10B981"], path[fill="#10B981"] {
-  filter: drop-shadow(0px 0px 6px rgba(16, 185, 129, 0.6));
+/* 5. Metrics & Badge Glows */
+svg circle, 
+div[class*="rounded-full"] {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important;
 }
-circle[stroke="#3B82F6"], path[fill="#3B82F6"] {
-  filter: drop-shadow(0px 0px 6px rgba(59, 130, 246, 0.6));
+
+span[class*="emerald"], span[class*="TRACK"] {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
+  color: #34d399 !important;
 }
