@@ -1,78 +1,130 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, CalendarDays, Check, ChevronRight, CircleUserRound, Loader2, RefreshCw, Scale, Settings2, Utensils } from "lucide-react";
-import { MetricHeader } from "@/components/MetricHeader";
+import {
+  Activity,
+  BarChart3,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleUserRound,
+  Flame,
+  Gauge,
+  GlassWater,
+  Menu,
+  Plus,
+  RefreshCw,
+  Scale,
+  Settings2,
+  Sparkles,
+  Target,
+  Trash2,
+  Utensils,
+  X,
+} from "lucide-react";
 import { QuickLogBar } from "@/components/QuickLogBar";
 import { TrendChart } from "@/components/TrendChart";
-import { getDashboard, logWeight, recalculateAdaptiveTargets, type CombinedParseResult, type DashboardResponse } from "@/lib/api";
+import {
+  getDashboard,
+  logWeight,
+  recalculateAdaptiveTargets,
+  type CombinedParseResult,
+  type DashboardResponse,
+} from "@/lib/api";
 
 const USER_ID = Number(process.env.NEXT_PUBLIC_USER_ID ?? 1);
-const TARGET_CALORIES = Number(process.env.NEXT_PUBLIC_TARGET_CALORIES ?? 2200);
-const TARGET_ACTIVE = Number(process.env.NEXT_PUBLIC_TARGET_ACTIVE_CALORIES ?? 350);
+const PROFILE_KEY = "adaptive-tracker-baseline-v2";
+const SCHEDULE_KEY = "adaptive-tracker-schedule-v1";
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+const STEPS = ["FOCUS", "BASELINE", "NEAT", "TRAINING", "COMPOSITION", "DESTINATION", "DIET", "PROTEIN", "STEPS", "ADHERENCE"];
+const colors = { mint: "#34d399", teal: "#2dd4bf", violet: "#a78bfa", amber: "#fbbf24" };
+
+type Profile = {
+  goal: "Fat loss" | "Body recomp" | "Hypertrophy";
+  weight: string;
+  height: string;
+  age: string;
+  gender: "Male" | "Female" | "Other";
+  neat: "Sedentary" | "Lightly active" | "Highly active";
+  scheduleNotes: string;
+  training: "0 days" | "1-2 days" | "3-4 days" | "5+ days";
+  bodyFat: "10-15%" | "15-20%" | "20-25%" | "30%+";
+  targetWeight: string;
+  diet: string;
+  protein: "Elite recomp" | "Standard fitness";
+  steps: string;
+  obstacles: string[];
+  habits: string;
+};
+
+type ActivityEntry = { id: number; day: string; exercise: string; duration: string; intensity: "Low" | "Moderate" | "High" };
+
+const emptyProfile: Profile = {
+  goal: "Body recomp", weight: "", height: "", age: "", gender: "Other", neat: "Lightly active", scheduleNotes: "",
+  training: "3-4 days", bodyFat: "20-25%", targetWeight: "", diet: "Omnivore", protein: "Standard fitness", steps: "7500", obstacles: [], habits: "",
+};
+
+const defaultSchedule: ActivityEntry[] = [
+  { id: 1, day: "Mon", exercise: "Strength training", duration: "45", intensity: "Moderate" },
+  { id: 2, day: "Wed", exercise: "Walk / mobility", duration: "30", intensity: "Low" },
+  { id: 3, day: "Fri", exercise: "Strength training", duration: "45", intensity: "High" },
+];
+
+function num(value: string, fallback: number) { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback; }
+function calculateTargets(profile: Profile, schedule: ActivityEntry[]) {
+  const weight = num(profile.weight, 70); const height = num(profile.height, 170); const age = num(profile.age, 28);
+  const bmr = profile.gender === "Male" ? 10 * weight + 6.25 * height - 5 * age + 5 : profile.gender === "Female" ? 10 * weight + 6.25 * height - 5 * age - 161 : 10 * weight + 6.25 * height - 5 * age - 78;
+  const neatFactor = profile.neat === "Sedentary" ? 1.2 : profile.neat === "Highly active" ? 1.55 : 1.375;
+  const scheduleBurn = schedule.reduce((total, entry) => total + num(entry.duration, 30) * (entry.intensity === "High" ? 8 : entry.intensity === "Moderate" ? 6 : 3), 0) / 7;
+  const stepBurn = Math.max(0, num(profile.steps, 7500) - 4000) * 0.025;
+  let tdee = bmr * neatFactor + scheduleBurn + stepBurn;
+  if (profile.goal === "Fat loss") tdee -= 350; if (profile.goal === "Hypertrophy") tdee += 250;
+  const lbm = weight * (1 - (profile.bodyFat === "10-15%" ? .125 : profile.bodyFat === "15-20%" ? .175 : profile.bodyFat === "20-25%" ? .225 : .30));
+  const protein = Math.round(lbm * (profile.protein === "Elite recomp" ? 2.2 : 1.6));
+  const fat = Math.round(weight * 0.8); const carbs = Math.max(80, Math.round((tdee - protein * 4 - fat * 9) / 4));
+  return { bmr: Math.round(bmr), tdee: Math.round(tdee), calories: Math.round(tdee), protein, carbs, fat, active: Math.round(scheduleBurn * 7 + stepBurn * 7) };
+}
+
+function Ring({ value, target, color, label }: { value: number; target: number; color: string; label: string }) {
+  const radius = 38; const circumference = 2 * Math.PI * radius; const progress = Math.min(1, Math.max(0, value / Math.max(target, 1)));
+  return <div className="relative grid h-28 w-28 shrink-0 place-items-center"><svg viewBox="0 0 96 96" className="absolute inset-0 -rotate-90"><circle cx="48" cy="48" r={radius} fill="none" stroke="#25252b" strokeWidth="5" /><circle cx="48" cy="48" r={radius} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)} className="ring-progress" /></svg><div className="text-center"><strong className="block text-2xl font-semibold text-white">{Math.round(value)}</strong><span className="text-[9px] uppercase tracking-[.18em] text-zinc-500">{label}</span></div></div>;
+}
+
+function Meter({ label, value, target, color }: { label: string; value: number; target: number; color: string }) {
+  return <div><div className="mb-2 flex justify-between text-xs"><span className="text-zinc-400">{label}</span><span className="font-mono text-zinc-200">{Math.round(value)} / {Math.round(target)}</span></div><div className="h-2 rounded-full bg-white/[.07]"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, value / Math.max(target, 1) * 100)}%`, background: color }} /></div></div>;
+}
+
+function Choice({ label, selected, onClick, detail }: { label: string; selected: boolean; onClick: () => void; detail?: string }) {
+  return <button type="button" onClick={onClick} className={`choice-card ${selected ? "choice-card-active" : ""}`}><span className="flex-1 text-left"><strong className="block text-sm text-white">{label}</strong>{detail && <small className="mt-1 block text-xs text-zinc-500">{detail}</small>}</span><span className={`choice-dot ${selected ? "choice-dot-active" : ""}`}>{selected && <Check className="h-3 w-3" />}</span></button>;
+}
+
+function BaselineWizard({ initial, onClose, onSave }: { initial: Profile; onClose: () => void; onSave: (profile: Profile) => void }) {
+  const [step, setStep] = useState(0); const [draft, setDraft] = useState(initial);
+  const update = <K extends keyof Profile>(key: K, value: Profile[K]) => setDraft((current) => ({ ...current, [key]: value }));
+  const toggleObstacle = (value: string) => update("obstacles", draft.obstacles.includes(value) ? draft.obstacles.filter((item) => item !== value) : [...draft.obstacles, value]);
+  const next = () => step === 9 ? onSave(draft) : setStep((current) => current + 1); const previous = () => setStep((current) => Math.max(0, current - 1));
+  const valid = step === 1 ? Boolean(draft.weight && draft.height && draft.age) : true;
+  return <div className="fixed inset-0 z-50 overflow-y-auto bg-[#050507]/95 p-3 backdrop-blur-xl sm:p-8"><div className="mx-auto min-h-full max-w-3xl py-4 sm:py-10"><div className="glass-card overflow-hidden"><div className="flex items-start justify-between border-b border-white/[.07] p-5 sm:p-7"><div><p className="eyebrow">Personal calibration · 10 steps</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Edit your baseline.</h2><p className="mt-2 max-w-xl text-sm text-zinc-500">Change these inputs whenever your goals, habits, or body changes.</p></div><button onClick={onClose} className="icon-button"><X className="h-4 w-4" /></button></div><div className="grid grid-cols-5 gap-1 border-b border-white/[.06] p-4 sm:grid-cols-10 sm:p-6">{STEPS.map((item, index) => <button key={item} onClick={() => setStep(index)} className={`min-w-0 text-[8px] font-semibold tracking-[.11em] ${index === step ? "text-emerald-300" : index < step ? "text-zinc-300" : "text-zinc-700"}`}><span className={`mx-auto mb-2 block h-1 rounded-full ${index <= step ? "bg-emerald-400" : "bg-white/[.08]"}`} />{item}</button>)}</div><div className="min-h-[420px] p-5 sm:p-8"><p className="eyebrow text-emerald-300">Question {step + 1} of 10</p>{step === 0 && <div><h3 className="wizard-title">What are you optimizing for?</h3><div className="grid gap-3 sm:grid-cols-3">{["Fat loss", "Body recomp", "Hypertrophy"].map((item) => <Choice key={item} label={item} selected={draft.goal === item} onClick={() => update("goal", item as Profile["goal"])} detail={item === "Fat loss" ? "Reduce body fat steadily" : item === "Body recomp" ? "Build while leaning out" : "Prioritize muscle gain"} />)}</div></div>}{step === 1 && <div><h3 className="wizard-title">Tell us your biological baseline.</h3><div className="grid gap-4 sm:grid-cols-2">{[["weight", "Current weight", "kg"], ["height", "Height", "cm"], ["age", "Age", "years"]].map(([key, label, suffix]) => <label key={key} className="field-label">{label}<div className="relative"><input className="field-input pr-14" type="number" value={draft[key as "weight" | "height" | "age"]} onChange={(event) => update(key as "weight" | "height" | "age", event.target.value)} /><span className="field-suffix">{suffix}</span></div></label>)}</div><div className="mt-5"><p className="field-label mb-3">Biological gender</p><div className="grid gap-3 sm:grid-cols-3">{["Male", "Female", "Other"].map((item) => <Choice key={item} label={item} selected={draft.gender === item} onClick={() => update("gender", item as Profile["gender"])} />)}</div></div></div>}{step === 2 && <div><h3 className="wizard-title">How much incidental movement is in your week?</h3><div className="grid gap-3 sm:grid-cols-3">{["Sedentary", "Lightly active", "Highly active"].map((item) => <Choice key={item} label={item} selected={draft.neat === item} onClick={() => update("neat", item as Profile["neat"])} />)}</div><label className="field-label mt-6">Describe your weekly schedule in detail (wake up times, desk work vs physical tasks, etc.)<textarea className="field-input mt-2 min-h-28 resize-y" value={draft.scheduleNotes} onChange={(event) => update("scheduleNotes", event.target.value)} placeholder="Example: Wake at 7:00, desk work 9–5, walk after lunch..." /></label></div>}{step === 3 && <div><h3 className="wizard-title">How many days do you weight train?</h3><div className="grid gap-3 sm:grid-cols-2">{["0 days", "1-2 days", "3-4 days", "5+ days"].map((item) => <Choice key={item} label={item} selected={draft.training === item} onClick={() => update("training", item as Profile["training"])} />)}</div></div>}{step === 4 && <div><h3 className="wizard-title">What is your estimated body-fat range?</h3><div className="grid gap-3 sm:grid-cols-2">{["10-15%", "15-20%", "20-25%", "30%+"].map((item) => <Choice key={item} label={item} selected={draft.bodyFat === item} onClick={() => update("bodyFat", item as Profile["bodyFat"])} />)}</div></div>}{step === 5 && <div><h3 className="wizard-title">Where do you want to land?</h3><label className="field-label max-w-sm">Target body weight<div className="relative mt-2"><input className="field-input pr-14" type="number" value={draft.targetWeight} onChange={(event) => update("targetWeight", event.target.value)} placeholder={draft.weight || "70"} /><span className="field-suffix">kg</span></div></label></div>}{step === 6 && <div><h3 className="wizard-title">What describes your dietary approach?</h3><div className="grid gap-3 sm:grid-cols-2">{["Omnivore", "High-protein", "Plant-based", "Low-carb", "Medical / allergies"].map((item) => <Choice key={item} label={item} selected={draft.diet === item} onClick={() => update("diet", item)} />)}</div></div>}{step === 7 && <div><h3 className="wizard-title">How should protein be calibrated?</h3><div className="grid gap-3 sm:grid-cols-2"><Choice label="Elite recomp" detail="2.2g/kg LBM" selected={draft.protein === "Elite recomp"} onClick={() => update("protein", "Elite recomp")} /><Choice label="Standard fitness" detail="1.6g/kg LBM" selected={draft.protein === "Standard fitness"} onClick={() => update("protein", "Standard fitness")} /></div></div>}{step === 8 && <div><h3 className="wizard-title">What is your daily step target?</h3><label className="field-label max-w-sm">Daily steps<div className="relative mt-2"><input className="field-input pr-20" type="number" value={draft.steps} onChange={(event) => update("steps", event.target.value)} /><span className="field-suffix">steps</span></div><small className="mt-2 block text-xs text-zinc-500">A practical target such as 7500 helps tune your NEAT estimate.</small></label></div>}{step === 9 && <div><h3 className="wizard-title">What makes consistency difficult?</h3><div className="grid gap-3 sm:grid-cols-2">{["Forgetting to log", "Portion estimation", "Intense cravings", "Time limits"].map((item) => <Choice key={item} label={item} selected={draft.obstacles.includes(item)} onClick={() => toggleObstacle(item)} />)}</div><label className="field-label mt-6">Daily habits / context<textarea className="field-input mt-2 min-h-28 resize-y" value={draft.habits} onChange={(event) => update("habits", event.target.value)} placeholder="Anything that changes your appetite, schedule, or adherence..." /></label></div>}</div><div className="flex items-center justify-between border-t border-white/[.07] p-5 sm:p-7"><button onClick={previous} disabled={step === 0} className="button-ghost disabled:opacity-20"><ChevronLeft className="h-4 w-4" />Back</button><span className="text-xs text-zinc-600">{step + 1} / 10</span><button onClick={next} disabled={!valid} className="button-primary">{step === 9 ? "Calculate baseline" : "Continue"}<ChevronRight className="h-4 w-4" /></button></div></div></div></div>;
+}
+
+function ScheduleBuilder({ entries, onChange, onReset }: { entries: ActivityEntry[]; onChange: (entries: ActivityEntry[]) => void; onReset: () => void }) {
+  const add = () => onChange([...entries, { id: Date.now(), day: "Sat", exercise: "New activity", duration: "30", intensity: "Moderate" }]);
+  return <section className="glass-card p-5 sm:p-7"><div className="flex items-start justify-between gap-4"><div><p className="eyebrow text-emerald-300">Activity tab</p><h2 className="mt-2 text-xl font-semibold text-white">Custom weekly schedule</h2><p className="mt-2 text-sm text-zinc-500">Tune your calorie and macro targets around the movement you actually do.</p></div><button onClick={add} className="button-primary shrink-0"><Plus className="h-4 w-4" />Add day</button></div><div className="mt-6 space-y-3">{entries.map((entry) => <div key={entry.id} className="grid gap-2 rounded-2xl border border-white/[.06] bg-black/20 p-3 sm:grid-cols-[110px_1fr_90px_120px_36px]"><select className="field-input" value={entry.day} onChange={(event) => onChange(entries.map((item) => item.id === entry.id ? { ...item, day: event.target.value } : item))}>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => <option key={day}>{day}</option>)}</select><input className="field-input" value={entry.exercise} onChange={(event) => onChange(entries.map((item) => item.id === entry.id ? { ...item, exercise: event.target.value } : item))} /><input className="field-input" type="number" value={entry.duration} onChange={(event) => onChange(entries.map((item) => item.id === entry.id ? { ...item, duration: event.target.value } : item))} /><select className="field-input" value={entry.intensity} onChange={(event) => onChange(entries.map((item) => item.id === entry.id ? { ...item, intensity: event.target.value as ActivityEntry["intensity"] } : item))}>{["Low", "Moderate", "High"].map((level) => <option key={level}>{level}</option>)}</select><button aria-label="Remove activity" onClick={() => onChange(entries.filter((item) => item.id !== entry.id))} className="icon-button"><Trash2 className="h-4 w-4" /></button></div>)}</div><div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/[.06] pt-5"><p className="text-xs text-zinc-500">{entries.length} scheduled sessions · saved locally</p><button onClick={onReset} className="button-ghost"><RefreshCw className="h-4 w-4" />Revert to baseline</button></div></section>;
+}
 
 export default function HomePage() {
-  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
-  const [weight, setWeight] = useState("");
-  const [weightSaving, setWeightSaving] = useState(false);
-  const [adaptiveBusy, setAdaptiveBusy] = useState(false);
-  const [adaptiveMessage, setAdaptiveMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"today" | "trends" | "profile">("today");
-  const [parsedLog, setParsedLog] = useState<CombinedParseResult | null>(null);
-
-  const refresh = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true); else setRefreshing(true);
-    try { setDashboard(await getDashboard(USER_ID)); setError(""); } catch (caught) { setError(caught instanceof Error ? caught.message : "Backend unavailable"); } finally { setLoading(false); setRefreshing(false); }
-  }, []);
-
+  const [profile, setProfile] = useState<Profile>(emptyProfile); const [schedule, setSchedule] = useState<ActivityEntry[]>(defaultSchedule); const [wizardOpen, setWizardOpen] = useState(false); const [activeTab, setActiveTab] = useState<"nutrition" | "analytics" | "activity">("nutrition"); const [dashboard, setDashboard] = useState<DashboardResponse | null>(null); const [weight, setWeight] = useState(""); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [adaptiveMessage, setAdaptiveMessage] = useState(""); const [parsedLog, setParsedLog] = useState<CombinedParseResult | null>(null); const [mobileNav, setMobileNav] = useState(false);
+  useEffect(() => { try { const saved = localStorage.getItem(PROFILE_KEY); const savedSchedule = localStorage.getItem(SCHEDULE_KEY); if (saved) setProfile({ ...emptyProfile, ...JSON.parse(saved) }); else setWizardOpen(true); if (savedSchedule) setSchedule(JSON.parse(savedSchedule)); } catch { /* storage unavailable */ } }, []);
+  useEffect(() => { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); }, [profile]); useEffect(() => { localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedule)); }, [schedule]);
+  const refresh = useCallback(async (silent = false) => { if (silent) setRefreshing(true); else setLoading(true); try { setDashboard(await getDashboard(USER_ID)); } catch { /* dashboard remains usable offline */ } finally { setLoading(false); setRefreshing(false); } }, []);
   useEffect(() => { void refresh(); }, [refresh]);
-
-  const metrics = useMemo(() => {
-    const days = dashboard?.days ?? [];
-    let calories = 0; let active = 0; let protein = 0; let carbs = 0; let fat = 0;
-    for (const day of days) for (const item of day.logged_items) {
-      const payload = item.structured_json;
-      const items = Array.isArray(payload.items) ? payload.items : [payload];
-      for (const parsed of items) if (parsed && typeof parsed === "object") {
-        const value = parsed as Record<string, unknown>;
-        if (item.entry_type === "NUTRITION") { calories += Number(value.estimated_calories ?? 0); protein += Number(value.protein_g ?? 0); carbs += Number(value.carbs_g ?? 0); fat += Number(value.fat_g ?? 0); }
-        if (item.entry_type === "ATHLETIC") active += Number(value.active_calories_burned ?? value.calories_burned ?? 0);
-      }
-    }
-    return { calories, active, protein, carbs, fat };
-  }, [dashboard]);
-
-  async function saveWeight() {
-    const parsed = Number(weight);
-    if (!Number.isFinite(parsed) || parsed <= 0) return;
-    setWeightSaving(true);
-    try { await logWeight({ user_id: USER_ID, date: todayIso(), metric_weight: parsed }); setWeight(""); await refresh(true); } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not save weight"); } finally { setWeightSaving(false); }
-  }
-
-  async function runAdaptive() {
-    setAdaptiveBusy(true); setAdaptiveMessage("");
-    try { const result = await recalculateAdaptiveTargets(USER_ID); setAdaptiveMessage(result.audit.reason); await refresh(true); } catch (caught) { setAdaptiveMessage(caught instanceof Error ? caught.message : "Could not recalculate"); } finally { setAdaptiveBusy(false); }
-  }
-
-  return <main className="min-h-screen px-4 pb-32 pt-7"><div className="mx-auto max-w-md">
-    <header className="mb-7 flex items-center justify-between"><div><p className="mb-1 text-[10px] font-medium uppercase tracking-[0.24em] text-lime-300/80">Friday · September 18</p><h1 className="text-[28px] font-semibold tracking-[-0.04em] text-white">Good evening<span className="text-lime-300">.</span></h1></div><button aria-label="Profile" onClick={() => setActiveTab("profile")} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-400 transition active:scale-95"><CircleUserRound className="h-5 w-5" /></button></header>
-    {error && <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-xs text-red-200">{error}. Check NEXT_PUBLIC_API_URL and the FastAPI server.</div>}
-    {activeTab === "today" && <div className="space-y-4">
-      <MetricHeader targetCalories={TARGET_CALORIES} consumedCalories={metrics.calories} targetActiveCalories={TARGET_ACTIVE} activeCalories={metrics.active} proteinGrams={metrics.protein} proteinTarget={150} carbsGrams={metrics.carbs} carbsTarget={220} fatGrams={metrics.fat} fatTarget={70} />
-      <TrendChart days={dashboard?.days ?? []} velocity={dashboard?.weekly_weight_velocity ?? null} />
-      <section className="rounded-[28px] border border-white/[0.07] bg-[#111111] p-5"><div className="mb-4 flex items-center justify-between"><div><p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-zinc-500">Today</p><h2 className="text-lg font-semibold text-white">Daily check-in</h2></div><CalendarDays className="h-4 w-4 text-zinc-600" /></div><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-teal-300/10 text-teal-200"><Scale className="h-4 w-4" /></div><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveWeight(); }} placeholder="Weight in kg" className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-lime-300/50" /><button onClick={() => void saveWeight()} disabled={weightSaving || !weight} className="h-10 rounded-xl bg-white px-4 text-xs font-semibold text-black transition active:scale-95 disabled:opacity-30">{weightSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}</button></div></section>
-      <section className="rounded-[28px] border border-white/[0.07] bg-[#111111] p-5"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-lime-300/10 text-lime-300"><Activity className="h-4 w-4" /></div><div className="min-w-0 flex-1"><p className="text-sm font-medium text-white">Adaptive targets</p><p className="mt-1 truncate text-xs text-zinc-500">{adaptiveMessage || "Use this after a full week of data."}</p></div><button onClick={() => void runAdaptive()} disabled={adaptiveBusy} aria-label="Recalculate adaptive targets" className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-zinc-300 transition active:scale-95 disabled:opacity-40">{adaptiveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</button></div></section>
-      {parsedLog && <section className="rounded-[28px] border border-lime-300/20 bg-lime-300/[0.06] p-5"><div className="flex items-start gap-3"><div className="grid h-8 w-8 place-items-center rounded-full bg-lime-300 text-black"><Check className="h-4 w-4" /></div><div><p className="text-sm font-medium text-lime-100">{parsedLog.category === "NUTRITION" ? "Nutrition" : "Workout"} parsed</p><p className="mt-1 text-xs leading-5 text-lime-100/60">{parsedLog.raw_summary}</p></div></div></section>}
-    </div>}
-    {activeTab === "trends" && <div className="space-y-4"><TrendChart days={dashboard?.days ?? []} velocity={dashboard?.weekly_weight_velocity ?? null} /><div className="rounded-[28px] border border-white/[0.07] bg-[#111111] p-5"><p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-zinc-500">Window totals</p><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white/[0.04] p-4"><Utensils className="mb-3 h-4 w-4 text-lime-300" /><p className="font-mono text-xl text-white">{Math.round(dashboard?.total_calorie_intake ?? 0)}</p><p className="text-[10px] uppercase tracking-wider text-zinc-500">calories logged</p></div><div className="rounded-2xl bg-white/[0.04] p-4"><Activity className="mb-3 h-4 w-4 text-teal-300" /><p className="font-mono text-xl text-white">{Math.round(dashboard?.total_active_calories_burned ?? 0)}</p><p className="text-[10px] uppercase tracking-wider text-zinc-500">active burn</p></div></div></div></div>}
-    {activeTab === "profile" && <div className="space-y-4"><section className="rounded-[28px] border border-white/[0.07] bg-[#111111] p-5"><p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-zinc-500">Profile</p><h2 className="text-lg font-semibold text-white">Your targets</h2><div className="mt-5 space-y-3 text-sm"><div className="flex justify-between border-b border-white/[0.06] pb-3 text-zinc-400"><span>Daily calories</span><span className="font-mono text-white">{TARGET_CALORIES} kcal</span></div><div className="flex justify-between border-b border-white/[0.06] pb-3 text-zinc-400"><span>Active burn</span><span className="font-mono text-white">{TARGET_ACTIVE} kcal</span></div><div className="flex justify-between text-zinc-400"><span>Logged weight days</span><span className="font-mono text-white">{dashboard?.weight_days_logged ?? 0} / 7</span></div></div></section><button onClick={() => void refresh()} className="flex w-full items-center justify-between rounded-2xl border border-white/[0.07] bg-[#111111] px-4 py-4 text-sm text-zinc-300"><span className="flex items-center gap-3"><Settings2 className="h-4 w-4" /> Sync with backend</span>{refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4 text-zinc-600" />}</button></div>}
-    <nav className="fixed bottom-0 left-1/2 z-10 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-white/[0.07] bg-[#080808]/90 px-8 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 backdrop-blur-xl"><button onClick={() => setActiveTab("today")} className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === "today" ? "text-lime-300" : "text-zinc-600"}`}><CalendarDays className="h-4 w-4" />Today</button><button onClick={() => setActiveTab("trends")} className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === "trends" ? "text-lime-300" : "text-zinc-600"}`}><Activity className="h-4 w-4" />Trends</button><button onClick={() => setActiveTab("profile")} className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === "profile" ? "text-lime-300" : "text-zinc-600"}`}><CircleUserRound className="h-4 w-4" />Profile</button></nav>
-    {loading && <div className="fixed inset-0 z-30 grid place-items-center bg-[#050505]/80 backdrop-blur-sm"><div className="flex items-center gap-3 rounded-full border border-white/10 bg-[#151515] px-4 py-3 text-xs text-zinc-300"><Loader2 className="h-4 w-4 animate-spin text-lime-300" />Loading your signal</div></div>}
-    <QuickLogBar onParsed={setParsedLog} />
-  </div></main>;
+  const targets = useMemo(() => calculateTargets(profile, schedule), [profile, schedule]);
+  const metrics = useMemo(() => { let calories = 0, active = 0, protein = 0, carbs = 0, fat = 0; for (const day of dashboard?.days ?? []) for (const item of day.logged_items) { const payload = item.structured_json; const list = Array.isArray(payload.items) ? payload.items : [payload]; for (const raw of list) { const value = raw as Record<string, unknown>; if (item.entry_type === "NUTRITION") { calories += Number(value.estimated_calories ?? 0); protein += Number(value.protein_g ?? 0); carbs += Number(value.carbs_g ?? 0); fat += Number(value.fat_g ?? 0); } else active += Number(value.active_calories_burned ?? value.calories_burned ?? 0); } } return { calories, active, protein, carbs, fat }; }, [dashboard]);
+  const saveProfile = (next: Profile) => { setProfile(next); setWizardOpen(false); setAdaptiveMessage("Baseline recalculated from your latest inputs."); };
+  const saveWeight = async () => { const parsed = Number(weight); if (!Number.isFinite(parsed) || parsed <= 0) return; await logWeight({ user_id: USER_ID, date: todayIso(), metric_weight: parsed }); setWeight(""); await refresh(true); };
+  const adaptive = async () => { try { const result = await recalculateAdaptiveTargets(USER_ID); setAdaptiveMessage(result.audit.reason); await refresh(true); } catch { setAdaptiveMessage("Adaptive recalculation needs a connected backend."); } };
+  const nav = [{ id: "nutrition", label: "Nutrition", icon: Utensils }, { id: "analytics", label: "Analytics", icon: BarChart3 }, { id: "activity", label: "Activity", icon: Activity }] as const;
+  return <main className="min-h-screen bg-[#050507] text-white"><div className="mx-auto flex min-h-screen max-w-[1500px]"><aside className="hidden w-64 shrink-0 border-r border-white/[.06] px-6 py-8 lg:block"><div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400 text-[#050507]"><Gauge className="h-5 w-5" /></div><div><p className="text-sm font-semibold">Adaptive</p><p className="text-[10px] uppercase tracking-[.22em] text-zinc-600">Body recomposition</p></div></div><nav className="mt-14 space-y-2">{nav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className={`side-nav ${activeTab === id ? "side-nav-active" : ""}`}><Icon className="h-4 w-4" />{label}</button>)}</nav><div className="mt-auto pt-72"><button onClick={() => setWizardOpen(true)} className="side-nav"><Settings2 className="h-4 w-4" />Edit baseline</button></div></aside><div className="min-w-0 flex-1 px-4 pb-32 sm:px-8 lg:px-12"><header className="mx-auto flex max-w-6xl items-center justify-between py-6 sm:py-9"><div className="flex items-center gap-3"><button onClick={() => setMobileNav(!mobileNav)} className="icon-button lg:hidden"><Menu className="h-5 w-5" /></button><div><p className="eyebrow text-emerald-300">{new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric" }).format(new Date())}</p><h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Good to see you<span className="text-emerald-300">.</span></h1></div></div><button onClick={() => setWizardOpen(true)} className="icon-button"><CircleUserRound className="h-5 w-5" /></button></header>{mobileNav && <div className="mb-5 grid gap-2 rounded-2xl border border-white/[.08] bg-[#121215] p-2 lg:hidden">{nav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => { setActiveTab(id); setMobileNav(false); }} className="side-nav"><Icon className="h-4 w-4" />{label}</button>)}</div>}<div className="mx-auto max-w-6xl">{activeTab !== "activity" && <section className="glass-card mb-5 overflow-hidden p-5 sm:p-7"><div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-center"><div><p className="eyebrow">Current target</p><div className="mt-3 flex items-end gap-3"><span className="text-5xl font-semibold tracking-[-.06em]">{targets.calories}</span><span className="pb-2 text-sm text-zinc-500">kcal / day</span></div><p className="mt-2 text-sm text-zinc-500">BMR {targets.bmr} · estimated TDEE {targets.tdee} · {profile.goal}</p></div><div className="flex flex-wrap gap-2"><button onClick={() => setWizardOpen(true)} className="button-ghost"><Settings2 className="h-4 w-4" />Edit baseline</button><button onClick={() => void adaptive()} className="button-primary"><RefreshCw className="h-4 w-4" />Recalculate</button></div></div><div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="stat-tile"><span>Protein</span><strong>{targets.protein}g</strong></div><div className="stat-tile"><span>Carbs</span><strong>{targets.carbs}g</strong></div><div className="stat-tile"><span>Fats</span><strong>{targets.fat}g</strong></div><div className="stat-tile"><span>Active burn</span><strong>{targets.active}</strong></div></div>{adaptiveMessage && <p className="mt-4 text-xs text-emerald-300">{adaptiveMessage}</p>}</section>}{activeTab === "nutrition" && <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]"><section className="glass-card p-5 sm:p-7"><div className="mb-6 flex items-start justify-between"><div><p className="eyebrow">Daily energy balance</p><h2 className="mt-2 text-xl font-semibold">Fuel the plan</h2></div><span className="status-pill">{metrics.calories <= targets.calories ? "On track" : "Over target"}</span></div><div className="flex flex-wrap items-center justify-center gap-7 border-b border-white/[.06] pb-7 sm:justify-start"><Ring value={metrics.calories} target={targets.calories} color={colors.mint} label={`of ${targets.calories}`} /><Ring value={metrics.active} target={targets.active} color={colors.teal} label="active burn" /></div><div className="mt-6 space-y-5"><Meter label="Protein" value={metrics.protein} target={targets.protein} color={colors.mint} /><Meter label="Carbohydrates" value={metrics.carbs} target={targets.carbs} color={colors.teal} /><Meter label="Fats" value={metrics.fat} target={targets.fat} color={colors.amber} /></div></section><section className="glass-card p-5 sm:p-7"><div className="mb-5 flex items-center justify-between"><div><p className="eyebrow">Quick check-in</p><h2 className="mt-2 text-xl font-semibold">Today’s signal</h2></div><CalendarDays className="h-5 w-5 text-zinc-600" /></div><div className="flex gap-2"><div className="relative min-w-0 flex-1"><Scale className="absolute left-3 top-3 h-4 w-4 text-zinc-600" /><input className="field-input pl-10" inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void saveWeight()} placeholder="Log weight in kg" /></div><button onClick={() => void saveWeight()} className="button-primary">Save</button></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="stat-tile"><span>Weight days</span><strong>{dashboard?.weight_days_logged ?? 0}<small> / 7</small></strong></div><div className="stat-tile"><span>Daily steps</span><strong>{profile.steps}</strong></div></div>{parsedLog && <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/[.08] p-4 text-sm text-emerald-200"><Check className="mb-2 h-4 w-4" />{parsedLog.raw_summary}</div>}</section></div>}{activeTab === "analytics" && <div className="space-y-5"><TrendChart days={dashboard?.days ?? []} velocity={dashboard?.weekly_weight_velocity ?? null} /><section className="grid gap-4 sm:grid-cols-3"><div className="glass-card p-5"><Flame className="h-4 w-4 text-amber-300" /><p className="eyebrow mt-5">Calories logged</p><strong className="mt-2 block text-2xl">{Math.round(dashboard?.total_calorie_intake ?? metrics.calories)}</strong></div><div className="glass-card p-5"><Target className="h-4 w-4 text-emerald-300" /><p className="eyebrow mt-5">Consistency</p><strong className="mt-2 block text-2xl">{dashboard?.weight_days_logged ?? 0}<span className="text-sm text-zinc-600"> / 7 days</span></strong></div><div className="glass-card p-5"><GlassWater className="h-4 w-4 text-sky-300" /><p className="eyebrow mt-5">Weekly velocity</p><strong className="mt-2 block text-2xl">{dashboard?.weekly_weight_velocity?.toFixed(2) ?? "—"}<span className="text-sm text-zinc-600"> kg</span></strong></div></section></div>}{activeTab === "activity" && <ScheduleBuilder entries={schedule} onChange={setSchedule} onReset={() => setSchedule(defaultSchedule)} />}</div></div><div className="fixed bottom-4 left-1/2 z-20 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2"><QuickLogBar onParsed={setParsedLog} /></div></div></main>;
 }

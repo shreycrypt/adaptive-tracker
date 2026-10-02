@@ -33,6 +33,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://3000-ilemdy92gpqlytktyreyv-f2e84f5c.sg2.manus.computer",
+        "https://adaptive-tracker-web.onrender.com",
     ],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],

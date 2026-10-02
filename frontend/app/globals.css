@@ -1,14 +1,37 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
-  --background: #050505;
-  --foreground: #f5f5f5;
-}
-
+:root { color-scheme: dark; --background: #050507; --foreground: #f4f4f5; }
 * { box-sizing: border-box; }
-html { background: var(--background); }
-body { margin: 0; background: radial-gradient(circle at 50% -10%, #161b13 0%, #050505 38rem); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
-button, input { font: inherit; }
+html { background: #050507; scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: #050507; color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+button, input, textarea, select { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
-::selection { background: #c7f36b; color: #050505; }
+button:active { transform: scale(.98); }
+::selection { background: #34d399; color: #04110d; }
+.glass-card { border: 1px solid rgba(255,255,255,.075); border-radius: 28px; background: rgba(18,18,21,.82); box-shadow: 0 24px 80px rgba(0,0,0,.24); backdrop-filter: blur(24px); }
+.eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: #71717a; }
+.wizard-title { margin: 14px 0 28px; max-width: 680px; font-size: clamp(1.7rem, 4vw, 2.35rem); font-weight: 600; letter-spacing: -.04em; color: #fff; }
+.choice-card { display: flex; min-height: 82px; align-items: center; gap: 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; background: rgba(255,255,255,.025); padding: 17px; text-align: left; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.choice-card:hover { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.055); }
+.choice-card-active { border-color: rgba(52,211,153,.72); background: rgba(52,211,153,.1); }
+.choice-dot { display: grid; height: 22px; width: 22px; place-items: center; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; color: #04110d; }
+.choice-dot-active { border-color: #34d399; background: #34d399; }
+.field-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #a1a1aa; }
+.field-input { width: 100%; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(0,0,0,.24); padding: 12px 13px; color: #fff; outline: none; }
+.field-input:focus { border-color: rgba(52,211,153,.65); box-shadow: 0 0 0 3px rgba(52,211,153,.08); }
+.field-input option { background: #151519; color: #fff; }
+.field-suffix { pointer-events: none; position: absolute; right: 13px; top: 13px; font-size: 11px; color: #52525b; }
+.button-primary, .button-ghost, .icon-button, .side-nav, .status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.button-primary { border-radius: 13px; background: #34d399; padding: 11px 15px; font-size: 12px; font-weight: 700; color: #04110d; }
+.button-ghost { border: 1px solid rgba(255,255,255,.1); border-radius: 13px; padding: 10px 14px; font-size: 12px; color: #d4d4d8; }
+.button-ghost:hover, .icon-button:hover { border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.06); }
+.icon-button { height: 38px; width: 38px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; color: #a1a1aa; }
+.side-nav { width: 100%; justify-content: flex-start; border-radius: 13px; padding: 12px 13px; font-size: 13px; color: #71717a; }
+.side-nav:hover, .side-nav-active { background: rgba(52,211,153,.08); color: #6ee7b7; }
+.status-pill { border: 1px solid rgba(52,211,153,.2); border-radius: 999px; background: rgba(52,211,153,.08); padding: 6px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #6ee7b7; }
+.stat-tile { border-radius: 16px; background: rgba(255,255,255,.035); padding: 13px; }
+.stat-tile span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: #71717a; }
+.stat-tile strong { display: block; margin-top: 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 18px; color: #fff; }
+.stat-tile small { font-size: 11px; color: #71717a; }
+.ring-progress { transition: stroke-dashoffset .6s cubic-bezier(.23,1,.32,1); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
