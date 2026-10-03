@@ -21,7 +21,7 @@ export function TrendChart({ days, velocity }: TrendChartProps) {
     <section className="glass-card p-5 sm:p-7">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">SIGNAL</p>
+          <p className="eyebrow">SIGNAL - Weight trend</p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">Weight trend</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export function TrendChart({ days, velocity }: TrendChartProps) {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="grid h-full place-items-center rounded-2xl border border-dashed border-white/[0.08] text-xs text-zinc-600">Log 5+ weight days to unlock your signal.</div>
+          <div className="grid h-full place-items-center rounded-2xl border border-dashed border-white/[0.08] text-xs text-zinc-600">Log weight for 5+ days to unlock the trend.</div>
         )}
       </div>
       <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">
