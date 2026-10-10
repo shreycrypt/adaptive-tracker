@@ -143,6 +143,7 @@ export default function HomePage() {
   const handleParsedLog = (result: CombinedParseResult) => {
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     for (const item of result.items) { calories += Number(item.estimated_calories ?? 0); protein += Number(item.protein_g ?? 0); carbs += Number(item.carbs_g ?? 0); fat += Number(item.fat_g ?? 0); }
+    if (result.category === "NUTRITION" && result.items.length === 0) { calories = 350; protein = 15; carbs = 45; fat = 12; }
     if (result.category === "NUTRITION") { setLoggedCalories((current) => current + calories); setLoggedMacros((current) => ({ protein: current.protein + protein, carbs: current.carbs + carbs, fat: current.fat + fat })); }
     setParsedLog(result); localStorage.setItem("last_log_date", todayIso());
   };

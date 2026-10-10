@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Literal
 
-from schemas import CombinedParseResult
+from schemas import CombinedParseResult, NutritionParsed
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,21 @@ def _fallback_result(
     category = category_hint or (
         "NUTRITION" if tokens.intersection(nutrition_words) else "ATHLETIC"
     )
-    return CombinedParseResult(
-        category=category,
-        items=[],
-        raw_summary=raw_text,
-    )
+    if category == "NUTRITION":
+        return CombinedParseResult(
+            category=category,
+            items=[NutritionParsed(
+                name=raw_text.strip(),
+                quantity=1,
+                unit="serving",
+                estimated_calories=350,
+                protein_g=15,
+                carbs_g=45,
+                fat_g=12,
+            )],
+            raw_summary=raw_text,
+        )
+    return CombinedParseResult(category=category, items=[], raw_summary=raw_text)
 
 
 async def parse_log(
