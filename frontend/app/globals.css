@@ -33,5 +33,5 @@ button:active { transform: scale(.98); }
 .stat-tile span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: #71717a; }
 .stat-tile strong { display: block; margin-top: 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 18px; color: #fff; }
 .stat-tile small { font-size: 11px; color: #71717a; }
-.ring-progress { transition: stroke-dashoffset .6s cubic-bezier(.23,1,.32,1); }
+.ring-progress { transition: stroke-dashoffset .8s cubic-bezier(.23,1,.32,1); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
