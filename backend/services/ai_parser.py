@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from typing import Literal
+from urllib.parse import quote_plus
 
 from schemas import CombinedParseResult, NutritionParsed
 
@@ -22,6 +24,21 @@ Never invent quantities or nutrient/training details that are not stated: use
 null for unknown optional values. Preserve the meaning of the input in
 raw_summary. If multiple things are mentioned, return one item per thing.
 """.strip()
+
+
+def _explicit_nutrition_result(raw_text: str) -> CombinedParseResult | None:
+    """Parse exact nutrition values when the user includes them in the log."""
+    kcal = re.search(r"(\d+(?:\.\d+)?)\s*(?:kcal|calories?)", raw_text, re.I)
+    protein = re.search(r"(?:p|protein)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*g", raw_text, re.I)
+    carbs = re.search(r"(?:c|carbs?|carbohydrates?)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*g", raw_text, re.I)
+    fat = re.search(r"(?:f|fat)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*g", raw_text, re.I)
+    if not kcal:
+        return None
+    return CombinedParseResult(category="NUTRITION", items=[NutritionParsed(
+        name=re.split(r"[,;(]", raw_text, maxsplit=1)[0].strip(), quantity=1, unit="serving",
+        estimated_calories=float(kcal.group(1)), protein_g=float(protein.group(1)) if protein else None,
+        carbs_g=float(carbs.group(1)) if carbs else None, fat_g=float(fat.group(1)) if fat else None,
+    )], raw_summary=raw_text)
 
 
 def _fallback_result(
@@ -47,21 +64,39 @@ def _fallback_result(
     category = category_hint or (
         "NUTRITION" if tokens.intersection(nutrition_words) else "ATHLETIC"
     )
-    if category == "NUTRITION":
-        return CombinedParseResult(
-            category=category,
-            items=[NutritionParsed(
-                name=raw_text.strip(),
-                quantity=1,
-                unit="serving",
-                estimated_calories=350,
-                protein_g=15,
-                carbs_g=45,
-                fat_g=12,
-            )],
-            raw_summary=raw_text,
-        )
+    explicit = _explicit_nutrition_result(raw_text) if category == "NUTRITION" else None
+    if explicit:
+        return explicit
     return CombinedParseResult(category=category, items=[], raw_summary=raw_text)
+    return CombinedParseResult(category=category, items=[], raw_summary=raw_text)
+
+
+async def _lookup_open_food_facts(raw_text: str) -> CombinedParseResult | None:
+    """Look up packaged/menu products when no configured AI parser is available."""
+    try:
+        import httpx
+        url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + quote_plus(raw_text) + "&search_simple=1&action=process&json=1&page_size=1"
+        async with httpx.AsyncClient(timeout=6) as client:
+            response = await client.get(url, headers={"User-Agent": "AdaptiveTracker/1.0"})
+            response.raise_for_status()
+            product = (response.json().get("products") or [None])[0]
+        if not product:
+            return None
+        nutriments = product.get("nutriments") or {}
+        calories = nutriments.get("energy-kcal_100g") or nutriments.get("energy-kcal_value")
+        if calories is None:
+            return None
+        name = product.get("product_name") or raw_text.strip()
+        return CombinedParseResult(category="NUTRITION", items=[NutritionParsed(
+            name=name, quantity=100, unit="g",
+            estimated_calories=float(calories),
+            protein_g=float(nutriments["proteins_100g"]) if nutriments.get("proteins_100g") is not None else None,
+            carbs_g=float(nutriments["carbohydrates_100g"]) if nutriments.get("carbohydrates_100g") is not None else None,
+            fat_g=float(nutriments["fat_100g"]) if nutriments.get("fat_100g") is not None else None,
+        )], raw_summary=f"{name} · values per 100g")
+    except Exception as exc:
+        logger.info("Open Food Facts lookup unavailable: %s", exc)
+        return None
 
 
 async def parse_log(
@@ -80,8 +115,8 @@ async def parse_log(
 
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            logger.warning("OPENAI_API_KEY is not configured; using parser fallback")
-            return _fallback_result(raw_text, category_hint)
+            logger.warning("OPENAI_API_KEY is not configured; using public nutrition lookup")
+            return await _lookup_open_food_facts(raw_text) or _fallback_result(raw_text, category_hint)
 
         client = instructor.from_openai(
             AsyncOpenAI(
@@ -101,4 +136,4 @@ async def parse_log(
         )
     except Exception as exc:  # External SDK, network, or model failures are recoverable.
         logger.exception("AI log parsing failed; using typed fallback: %s", exc)
-        return _fallback_result(raw_text, category_hint)
+        return await _lookup_open_food_facts(raw_text) or _fallback_result(raw_text, category_hint)

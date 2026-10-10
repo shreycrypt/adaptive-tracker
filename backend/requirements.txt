@@ -9,3 +9,5 @@ pydantic
 instructor
 openai
 python-dotenv
+
+httpx

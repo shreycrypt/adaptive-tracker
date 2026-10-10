@@ -147,7 +147,8 @@ export default function HomePage() {
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     for (const item of result.items) { calories += Number(item.estimated_calories ?? 0); protein += Number(item.protein_g ?? 0); carbs += Number(item.carbs_g ?? 0); fat += Number(item.fat_g ?? 0); }
     const category = String(result.category).toUpperCase();
-    if (category === "NUTRITION" && (result.items.length === 0 || calories <= 0)) { calories = 350; protein = 15; carbs = 45; fat = 12; }
+    if (category === "NUTRITION" && result.items.length === 0) { setParsedLog({ ...result, raw_summary: `${result.raw_summary} · Add kcal and macros for an exact entry.` }); return; }
+    if (category === "NUTRITION" && calories <= 0) { setParsedLog({ ...result, raw_summary: `${result.raw_summary} · Nutrition values were not available.` }); return; }
     if (category === "NUTRITION") {
       setDailyTotals((current) => {
         const next = { calories: current.calories + calories, protein: current.protein + protein, carbs: current.carbs + carbs, fat: current.fat + fat };
