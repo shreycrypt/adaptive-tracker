@@ -1,16 +1,17 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700&display=swap");
 @import "tailwindcss";
 
 :root { color-scheme: dark; --background: #050507; --foreground: #f4f4f5; }
 * { box-sizing: border-box; }
 html { background: #050507; scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; background: #050507; color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+body { margin: 0; min-width: 320px; background: #050507; color: var(--foreground); font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif; }
 button, input, textarea, select { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 button:active { transform: scale(.98); }
 ::selection { background: #34d399; color: #04110d; }
 .glass-card { border: 1px solid rgba(255,255,255,.075); border-radius: 28px; background: rgba(18,18,21,.82); box-shadow: 0 24px 80px rgba(0,0,0,.24); backdrop-filter: blur(24px); }
 .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: #71717a; }
-.wizard-title { margin: 14px 0 28px; max-width: 680px; font-size: clamp(1.7rem, 4vw, 2.35rem); font-weight: 600; letter-spacing: -.04em; color: #fff; }
+.wizard-title { font-family: "Syne", "DM Sans", sans-serif; margin: 14px 0 28px; max-width: 680px; font-size: clamp(1.7rem, 4vw, 2.35rem); font-weight: 600; letter-spacing: -.04em; color: #fff; }
 .choice-card { display: flex; min-height: 82px; align-items: center; gap: 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; background: rgba(255,255,255,.025); padding: 17px; text-align: left; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
 .choice-card:hover { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.055); }
 .choice-card-active { border-color: rgba(52,211,153,.72); background: rgba(52,211,153,.1); }
@@ -34,4 +35,11 @@ button:active { transform: scale(.98); }
 .stat-tile strong { display: block; margin-top: 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 18px; color: #fff; }
 .stat-tile small { font-size: 11px; color: #71717a; }
 .ring-progress { transition: stroke-dashoffset .8s cubic-bezier(.23,1,.32,1); }
+@media (max-width: 640px) {
+  .glass-card { border-radius: 20px; }
+  .wizard-title { margin-bottom: 20px; font-size: 1.65rem; }
+  .choice-card { min-height: 68px; gap: 11px; padding: 13px; }
+  .button-primary, .button-ghost { min-height: 42px; padding: 10px 12px; }
+  .field-input { min-height: 44px; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }

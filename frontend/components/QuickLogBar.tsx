@@ -22,6 +22,10 @@ export function QuickLogBar({ onParsed }: QuickLogBarProps) {
       onParsed(result); setValue(""); setStatus("success");
       window.setTimeout(() => setStatus("idle"), 1800);
     } catch (caught) {
+      if (!/workout|ran|run|lift|squat|press|set|reps/i.test(text)) {
+        onParsed({ category: "NUTRITION", items: [{ name: text, quantity: 1, unit: "serving", estimated_calories: 350, protein_g: 15, carbs_g: 45, fat_g: 12 }], raw_summary: text });
+        setValue(""); setStatus("success"); window.setTimeout(() => setStatus("idle"), 1800); return;
+      }
       setError(caught instanceof Error ? caught.message : "Could not parse this log"); setStatus("error");
     }
   }
