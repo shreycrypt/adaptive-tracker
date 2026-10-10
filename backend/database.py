@@ -37,6 +37,8 @@ def normalize_database_url(url: str) -> tuple[str, dict[str, object]]:
 
     parts = urlsplit(url)
     query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    # libpq accepts channel_binding, but asyncpg rejects it as a connect kwarg.
+    query.pop("channel_binding", None)
     sslmode = query.pop("sslmode", None)
     ssl_value = query.pop("ssl", None)
     needs_ssl = sslmode in {"require", "verify-ca", "verify-full", "prefer"} or (
