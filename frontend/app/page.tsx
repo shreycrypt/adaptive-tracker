@@ -116,20 +116,19 @@ function ScheduleBuilder({ entries, onChange, onReset }: { entries: ActivityEntr
 }
 
 export default function HomePage() {
-  const [profile, setProfile] = useState<Profile>(emptyProfile); const [schedule, setSchedule] = useState<ActivityEntry[]>(defaultSchedule); const [wizardOpen, setWizardOpen] = useState(true); const [loggedCalories, setLoggedCalories] = useState(0); const [loggedMacros, setLoggedMacros] = useState({ protein: 0, carbs: 0, fat: 0 }); const [activeTab, setActiveTab] = useState<"nutrition" | "analytics" | "activity">("nutrition"); const [dashboard, setDashboard] = useState<DashboardResponse | null>(null); const [weight, setWeight] = useState(""); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [adaptiveMessage, setAdaptiveMessage] = useState(""); const [parsedLog, setParsedLog] = useState<CombinedParseResult | null>(null); const [mobileNav, setMobileNav] = useState(false);
+  const [profile, setProfile] = useState<Profile>(emptyProfile); const [schedule, setSchedule] = useState<ActivityEntry[]>(defaultSchedule); const [wizardOpen, setWizardOpen] = useState(true); const [dailyTotals, setDailyTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 }); const [activeTab, setActiveTab] = useState<"nutrition" | "analytics" | "activity">("nutrition"); const [dashboard, setDashboard] = useState<DashboardResponse | null>(null); const [weight, setWeight] = useState(""); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [adaptiveMessage, setAdaptiveMessage] = useState(""); const [parsedLog, setParsedLog] = useState<CombinedParseResult | null>(null); const [mobileNav, setMobileNav] = useState(false);
   useEffect(() => {
     const syncDay = () => {
       const currentDate = todayIso();
       const lastDate = localStorage.getItem("last_log_date");
-      if (lastDate && lastDate !== currentDate) { setLoggedCalories(0); setLoggedMacros({ protein: 0, carbs: 0, fat: 0 }); localStorage.removeItem("logged_calories_today"); localStorage.removeItem("logged_macros_today"); }
+      if (lastDate && lastDate !== currentDate) { setDailyTotals({ calories: 0, protein: 0, carbs: 0, fat: 0 }); localStorage.removeItem("logged_calories_today"); localStorage.removeItem("logged_macros_today"); }
       localStorage.setItem("last_log_date", currentDate);
     };
     try {
       const saved = localStorage.getItem(PROFILE_KEY); const savedSchedule = localStorage.getItem(SCHEDULE_KEY);
       const savedCalories = Number(localStorage.getItem("logged_calories_today") ?? 0);
       const savedMacros = JSON.parse(localStorage.getItem("logged_macros_today") ?? '{"protein":0,"carbs":0,"fat":0}');
-      if (Number.isFinite(savedCalories)) setLoggedCalories(savedCalories);
-      if (savedMacros && typeof savedMacros === "object") setLoggedMacros({ protein: Number(savedMacros.protein) || 0, carbs: Number(savedMacros.carbs) || 0, fat: Number(savedMacros.fat) || 0 });
+      if (Number.isFinite(savedCalories)) setDailyTotals({ calories: savedCalories, protein: Number(savedMacros?.protein) || 0, carbs: Number(savedMacros?.carbs) || 0, fat: Number(savedMacros?.fat) || 0 });
       const completed = localStorage.getItem("has_completed_baseline") === "true";
       if (saved) setProfile({ ...emptyProfile, ...JSON.parse(saved) });
       if (!saved || !completed) setWizardOpen(true);
@@ -143,15 +142,19 @@ export default function HomePage() {
   const refresh = useCallback(async (silent = false) => { if (silent) setRefreshing(true); else setLoading(true); try { setDashboard(await getDashboard(USER_ID)); } catch { /* dashboard remains usable offline */ } finally { setLoading(false); setRefreshing(false); } }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   const targets = useMemo(() => calculateTargets(profile, schedule), [profile, schedule]);
-  const metrics = useMemo(() => { let calories = 0, active = 0, protein = 0, carbs = 0, fat = 0; for (const day of dashboard?.days ?? []) for (const item of day.logged_items) { const payload = item.structured_json; const list = Array.isArray(payload.items) ? payload.items : [payload]; for (const raw of list) { const value = raw as Record<string, unknown>; if (item.entry_type === "NUTRITION") { calories += Number(value.estimated_calories ?? 0); protein += Number(value.protein_g ?? 0); carbs += Number(value.carbs_g ?? 0); fat += Number(value.fat_g ?? 0); } else active += Number(value.active_calories_burned ?? value.calories_burned ?? 0); } } return { calories: calories + loggedCalories, active, protein: protein + loggedMacros.protein, carbs: carbs + loggedMacros.carbs, fat: fat + loggedMacros.fat }; }, [dashboard, loggedCalories, loggedMacros]);
+  const metrics = useMemo(() => { let calories = 0, active = 0, protein = 0, carbs = 0, fat = 0; for (const day of dashboard?.days ?? []) for (const item of day.logged_items) { const payload = item.structured_json; const list = Array.isArray(payload.items) ? payload.items : [payload]; for (const raw of list) { const value = raw as Record<string, unknown>; if (item.entry_type === "NUTRITION") { calories += Number(value.estimated_calories ?? 0); protein += Number(value.protein_g ?? 0); carbs += Number(value.carbs_g ?? 0); fat += Number(value.fat_g ?? 0); } else active += Number(value.active_calories_burned ?? value.calories_burned ?? 0); } } return { calories: calories + dailyTotals.calories, active, protein: protein + dailyTotals.protein, carbs: carbs + dailyTotals.carbs, fat: fat + dailyTotals.fat }; }, [dashboard, dailyTotals]);
   const handleParsedLog = (result: CombinedParseResult) => {
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     for (const item of result.items) { calories += Number(item.estimated_calories ?? 0); protein += Number(item.protein_g ?? 0); carbs += Number(item.carbs_g ?? 0); fat += Number(item.fat_g ?? 0); }
     const category = String(result.category).toUpperCase();
     if (category === "NUTRITION" && (result.items.length === 0 || calories <= 0)) { calories = 350; protein = 15; carbs = 45; fat = 12; }
     if (category === "NUTRITION") {
-      setLoggedCalories((current) => { const next = current + calories; localStorage.setItem("logged_calories_today", String(next)); return next; });
-      setLoggedMacros((current) => { const next = { protein: current.protein + protein, carbs: current.carbs + carbs, fat: current.fat + fat }; localStorage.setItem("logged_macros_today", JSON.stringify(next)); return next; });
+      setDailyTotals((current) => {
+        const next = { calories: current.calories + calories, protein: current.protein + protein, carbs: current.carbs + carbs, fat: current.fat + fat };
+        localStorage.setItem("logged_calories_today", String(next.calories));
+        localStorage.setItem("logged_macros_today", JSON.stringify({ protein: next.protein, carbs: next.carbs, fat: next.fat }));
+        return next;
+      });
     }
     setParsedLog(result); localStorage.setItem("last_log_date", todayIso());
   };
